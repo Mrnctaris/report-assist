@@ -34,12 +34,12 @@ def extract_text_from_pdf(pdf_path):
                     text += page_text + " "  # 改行をスペースに変換
         cleaned_text = " ".join(text.split())  # 余分な空白を削除
 
-        # ✅ コンソールに出力（デバッグ用）
-        print("🔍 PDF本文の一部:", cleaned_text[:1000])  # 最初の1000文字を表示
+        # コンソールに出力（デバッグ用）
+        print("PDF本文の一部:", cleaned_text[:1000])  # 最初の1000文字を表示
 
         return cleaned_text if cleaned_text else "PDFからテキストを取得できませんでした。"
     except Exception as e:
-        print("❌ PDF解析エラー:", e)
+        print("PDF解析エラー:", e)
         return "PDFを読み取れませんでした。"
 
 
