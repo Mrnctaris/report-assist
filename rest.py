@@ -34,7 +34,7 @@ def extract_text_from_pdf(pdf_path):
                     text += page_text + " "  # 改行をスペースに変換
         cleaned_text = " ".join(text.split())  # 余分な空白を削除
 
-        # コンソールに出力（デバッグ用）
+        #  コンソールに出力（デバッグ用）
         print("PDF本文の一部:", cleaned_text[:1000])  # 最初の1000文字を表示
 
         return cleaned_text if cleaned_text else "PDFからテキストを取得できませんでした。"
@@ -44,27 +44,35 @@ def extract_text_from_pdf(pdf_path):
 
 
 
+
 # Web記事からテキストを取得
-def fetch_web_text(url):
-    print("Web取得開始:", url)
+def extract_text_from_web(url):
+    print("Webページ解析開始:", url)
+    
     try:
-        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        soup = BeautifulSoup(response.text, 'html.parser')
+        headers = {"User-Agent": "Mozilla/5.0"}  # ユーザーエージェントを設定
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # HTTPエラーがあれば例外を出す
 
-        # 記事本文らしきテキストを取得
-        article = soup.find('article')
-        if article:
-            paragraphs = article.find_all('p')
-        else:
-            paragraphs = soup.find_all('p')
+        #  HTMLをパース（解析）
+        soup = BeautifulSoup(response.text, "html.parser")
 
-        text = '\n'.join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 20])  # 20文字以上の段落を取得
-        print("取得したWeb記事の全文:", text[:500])
+        #  記事本文を取得（多くのサイトで記事は <p> タグにある）
+        paragraphs = soup.find_all("p")
+        text = " ".join(p.get_text() for p in paragraphs)
 
-        return text if text else "Web記事のテキストを取得できませんでした。"
-    except Exception as e:
+        #  テキストがない場合の処理
+        if not text.strip():
+            print("⚠ 記事本文を取得できませんでした。")
+            return "記事本文を取得できませんでした。"
+
+        #  デバッグ用（最初の1000文字を出力）
+        print("Web本文の一部:", text[:1000])
+
+        return text
+    except requests.exceptions.RequestException as e:
         print("Web取得エラー:", e)
-        return "Web記事を取得できませんでした。"
+        return "Webページを取得できませんでした。"
 
 # GUIメイン処理
 def main():
@@ -86,11 +94,32 @@ def main():
         event, values = window.read()
         if event == sg.WINDOW_CLOSED:
             break
-        
+        if event == '要約開始':
+            input_text = ""
+
+            #  PDF処理
+            if values.get('pdf_path'):
+                pdf_path = values['pdf_path']
+                input_text = extract_text_from_pdf(pdf_path)
+
+            #  Web記事処理
+            elif values.get('url'):
+                input_text = extract_text_from_web(values['url'])
+
+            #  テキストをGUIに表示
+            window['output'].update(input_text)
+
+            #  要約処理
+            if input_text.strip():  # 空でない場合に要約する
+                summary = summarize_text(input_text)
+                window['summary'].update(summary)
+            else:
+                window['summary'].update("要約できる内容がありません。")
+
         if event == '取得':
             url = values.get('url', '').strip()
             if url:
-                text = fetch_web_text(url)
+                text = extract_text_from_web(url)
                 if "取得できませんでした" in text:
                     window['summary'].update(text)
                     continue  # エラーならスキップ
